@@ -85,6 +85,7 @@
   .share-row{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:18px}
   .share-row .btn{padding:9px 16px;font-size:.82rem}
   .copied{color:var(--gold-bright);font-weight:700;font-size:.82rem;min-height:1.1em;margin-top:10px}
+  .featured-note{color:var(--ink-dim);font-size:.78rem;font-style:italic;opacity:.85;margin:-14px 0 18px}
 
   .subscribe{margin:26px 0 10px;border-radius:26px;padding:32px 28px;
     background:rgba(244,239,226,.04);border:1px solid rgba(244,239,226,.12)}
@@ -138,6 +139,7 @@
     <div class="oracle-label" id="oracle-label">Today's Reading</div>
     <blockquote id="oracle-quote">Loading your oracle…</blockquote>
     <cite>— The Off-Leash Oracle™</cite>
+    <div class="featured-note" id="featured-note"></div>
     <div class="card-actions">
       <button class="btn btn-gold" id="pull-btn">🌙 See yesterday's reading</button>
       <a class="btn btn-ghost" href="#subscribe">Get it daily →</a>
@@ -257,6 +259,7 @@
   const quoteEl = document.getElementById('oracle-quote');
   const copiedEl = document.getElementById('copied-note');
   const labelEl = document.getElementById('oracle-label');
+  const noteEl = document.getElementById('featured-note');
   const pullBtn = document.getElementById('pull-btn');
   let currentQuote = '';
   let showingYesterday = false;
@@ -288,8 +291,10 @@
       showQuote(oracleQuotes[FEATURED_INDEX % oracleQuotes.length]);
       labelEl.textContent = "✨ Featured Reading";
       pullBtn.textContent = "🌞 See today's reading";
+      noteEl.textContent = "Inspired by an old Eskimo proverb, seen through a dog's eyes.";
       return;
     }
+    noteEl.textContent = "";
     showQuote(quoteForDay(showingYesterday ? 1 : 0));
     labelEl.textContent = showingYesterday ? "Yesterday's Reading" : "Today's Reading";
     pullBtn.textContent = showingYesterday ? "☀️ Back to today's reading" : "🌙 See yesterday's reading";
