@@ -142,6 +142,7 @@
     <div class="featured-note" id="featured-note"></div>
     <div class="card-actions">
       <button class="btn btn-gold" id="pull-btn">🌙 See yesterday's reading</button>
+      <button class="btn btn-ghost" id="heckle-btn">🐟 Hecklefish mode</button>
       <a class="btn btn-ghost" href="#subscribe">Get it daily →</a>
     </div>
     <div class="share-row">
@@ -261,18 +262,24 @@
   const labelEl = document.getElementById('oracle-label');
   const noteEl = document.getElementById('featured-note');
   const pullBtn = document.getElementById('pull-btn');
+  const heckleBtn = document.getElementById('heckle-btn');
   let currentQuote = '';
   let showingYesterday = false;
   let showingFeatured = true;
+  let heckle = false;
+  let cheekyQuotes = [];
   const FEATURED_INDEX = 500;
+
+  function activeSet(){ return heckle && cheekyQuotes.length ? cheekyQuotes : oracleQuotes; }
 
   // Stable day number (days since epoch), so the same card shows all day.
   function dayNumber(offset){
     return Math.floor(Date.now() / 86400000) - (offset || 0);
   }
   function quoteForDay(offset){
-    const idx = ((dayNumber(offset) % oracleQuotes.length) + oracleQuotes.length) % oracleQuotes.length;
-    return oracleQuotes[idx];
+    const set = activeSet();
+    const idx = ((dayNumber(offset) % set.length) + set.length) % set.length;
+    return set[idx];
   }
   function setShareLinks(q){
     const text = `${q} — The Off-Leash Oracle™`;
@@ -287,6 +294,15 @@
     setShareLinks(q);
   }
   function render(){
+    if (heckle) {
+      noteEl.textContent = "";
+      showQuote(quoteForDay(showingYesterday ? 1 : 0));
+      labelEl.textContent = showingYesterday ? "🐟 Yesterday's Heckle" : "🐟 Hecklefish Mode";
+      pullBtn.textContent = showingYesterday ? "☀️ Back to today's heckle" : "🌙 See yesterday's heckle";
+      heckleBtn.textContent = "✨ Back to wisdom";
+      return;
+    }
+    heckleBtn.textContent = "🐟 Hecklefish mode";
     if (showingFeatured) {
       showQuote(oracleQuotes[FEATURED_INDEX % oracleQuotes.length]);
       labelEl.textContent = "✨ Featured Reading";
@@ -300,6 +316,10 @@
     pullBtn.textContent = showingYesterday ? "☀️ Back to today's reading" : "🌙 See yesterday's reading";
   }
 
+  heckleBtn.addEventListener('click', () => {
+    heckle = !heckle; showingFeatured = false; showingYesterday = false; render();
+  });
+
   // Load the full canonical dogism set; fall back to the inline list if the fetch fails.
   fetch('data/oracle-quotes.json', { cache: 'no-cache' })
     .then(function(r){ return r.ok ? r.json() : null; })
@@ -310,6 +330,16 @@
     })
     .catch(function(){ /* keep inline fallback */ })
     .finally(function(){ render(); });
+
+  // Hecklefish set — cheeky dog truths.
+  fetch('data/oracle-cheeky.json', { cache: 'no-cache' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(list){
+      if (Array.isArray(list) && list.length) {
+        cheekyQuotes = list.filter(function(q){ return typeof q === 'string' && q.trim(); });
+      }
+    })
+    .catch(function(){ /* heckle stays empty, button is harmless */ });
 
   pullBtn.addEventListener('click', () => {
     if (showingFeatured) { showingFeatured = false; showingYesterday = false; }
