@@ -260,6 +260,8 @@
   const pullBtn = document.getElementById('pull-btn');
   let currentQuote = '';
   let showingYesterday = false;
+  let showingFeatured = true;
+  const FEATURED_INDEX = 500;
 
   // Stable day number (days since epoch), so the same card shows all day.
   function dayNumber(offset){
@@ -282,6 +284,12 @@
     setShareLinks(q);
   }
   function render(){
+    if (showingFeatured) {
+      showQuote(oracleQuotes[FEATURED_INDEX % oracleQuotes.length]);
+      labelEl.textContent = "✨ Featured Reading";
+      pullBtn.textContent = "🌞 See today's reading";
+      return;
+    }
     showQuote(quoteForDay(showingYesterday ? 1 : 0));
     labelEl.textContent = showingYesterday ? "Yesterday's Reading" : "Today's Reading";
     pullBtn.textContent = showingYesterday ? "☀️ Back to today's reading" : "🌙 See yesterday's reading";
@@ -299,7 +307,8 @@
     .finally(function(){ render(); });
 
   pullBtn.addEventListener('click', () => {
-    showingYesterday = !showingYesterday;
+    if (showingFeatured) { showingFeatured = false; showingYesterday = false; }
+    else { showingYesterday = !showingYesterday; }
     render();
   });
   document.getElementById('copy-share').addEventListener('click', async () => {
