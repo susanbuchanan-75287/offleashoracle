@@ -131,15 +131,15 @@
   <section class="hero">
     <span class="eyebrow">Daily Trail Wisdom</span>
     <h1>Your <span class="glow">6&nbsp;AM trail truth</span>,<br>delivered by the dogs.</h1>
-    <p class="lede">A fresh reading of cosmic dog wisdom every morning — the kind of small, four-pawed truth that resets your whole day. Pull one now.</p>
+    <p class="lede">A fresh reading of cosmic dog wisdom every morning — the kind of small, four-pawed truth that resets your whole day. Catch today's, or peek at yesterday's.</p>
   </section>
 
   <section class="oracle-card" aria-live="polite">
-    <div class="oracle-label">Today's Reading</div>
+    <div class="oracle-label" id="oracle-label">Today's Reading</div>
     <blockquote id="oracle-quote">Loading your oracle…</blockquote>
     <cite>— The Off-Leash Oracle™</cite>
     <div class="card-actions">
-      <button class="btn btn-gold" id="pull-btn">🔮 Pull another</button>
+      <button class="btn btn-gold" id="pull-btn">🌙 See yesterday's reading</button>
       <a class="btn btn-ghost" href="#subscribe">Get it daily →</a>
     </div>
     <div class="share-row">
@@ -206,7 +206,7 @@
   const SIGNUP_ENDPOINT = 'https://us-central1-binditails-da2de.cloudfunctions.net/oracleSignup';
   const SHARE_URL = 'https://offleashoracle.com/';
 
-  const oracleQuotes = [
+  let oracleQuotes = [
     "Your dog wakes you early not because they're hungry. They're protecting you from sleeping through your own life.",
     "Every sniff is a prayer. Every zoomie is a hallelujah.",
     "The leash is not a limitation. It's a love letter that says: I'll go wherever you go.",
@@ -256,13 +256,18 @@
 
   const quoteEl = document.getElementById('oracle-quote');
   const copiedEl = document.getElementById('copied-note');
+  const labelEl = document.getElementById('oracle-label');
+  const pullBtn = document.getElementById('pull-btn');
   let currentQuote = '';
+  let showingYesterday = false;
 
-  function dayIndex(){
-    const now = new Date();
-    const start = new Date(now.getFullYear(), 0, 0);
-    const day = Math.floor((now - start) / 86400000);
-    return day % oracleQuotes.length;
+  // Stable day number (days since epoch), so the same card shows all day.
+  function dayNumber(offset){
+    return Math.floor(Date.now() / 86400000) - (offset || 0);
+  }
+  function quoteForDay(offset){
+    const idx = ((dayNumber(offset) % oracleQuotes.length) + oracleQuotes.length) % oracleQuotes.length;
+    return oracleQuotes[idx];
   }
   function setShareLinks(q){
     const text = `${q} — The Off-Leash Oracle™`;
@@ -276,13 +281,26 @@
     quoteEl.textContent = q;
     setShareLinks(q);
   }
-  // Daily reading on load
-  showQuote(oracleQuotes[dayIndex()]);
+  function render(){
+    showQuote(quoteForDay(showingYesterday ? 1 : 0));
+    labelEl.textContent = showingYesterday ? "Yesterday's Reading" : "Today's Reading";
+    pullBtn.textContent = showingYesterday ? "☀️ Back to today's reading" : "🌙 See yesterday's reading";
+  }
 
-  document.getElementById('pull-btn').addEventListener('click', () => {
-    let q;
-    do { q = oracleQuotes[Math.floor(Math.random()*oracleQuotes.length)]; } while (q === currentQuote && oracleQuotes.length > 1);
-    showQuote(q);
+  // Load the full canonical dogism set; fall back to the inline list if the fetch fails.
+  fetch('data/oracle-quotes.json', { cache: 'no-cache' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(list){
+      if (Array.isArray(list) && list.length) {
+        oracleQuotes = list.filter(function(q){ return typeof q === 'string' && q.trim(); });
+      }
+    })
+    .catch(function(){ /* keep inline fallback */ })
+    .finally(function(){ render(); });
+
+  pullBtn.addEventListener('click', () => {
+    showingYesterday = !showingYesterday;
+    render();
   });
   document.getElementById('copy-share').addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(`${currentQuote} — The Off-Leash Oracle™ ${SHARE_URL}`);
