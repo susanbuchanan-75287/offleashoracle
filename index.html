@@ -268,7 +268,7 @@
   let showingFeatured = true;
   let heckle = false;
   let cheekyQuotes = [];
-  const FEATURED_INDEX = 500;
+  function featuredIdx(){ const i = oracleQuotes.findIndex(q => q.includes('holes in the floor of heaven')); return i < 0 ? 0 : i; }
 
   function activeSet(){ return heckle && cheekyQuotes.length ? cheekyQuotes : oracleQuotes; }
 
@@ -304,7 +304,7 @@
     }
     heckleBtn.textContent = "🐟 Hecklefish mode";
     if (showingFeatured) {
-      showQuote(oracleQuotes[FEATURED_INDEX % oracleQuotes.length]);
+      showQuote(oracleQuotes[featuredIdx()]);
       labelEl.textContent = "✨ Featured Reading";
       pullBtn.textContent = "🌞 See today's reading";
       noteEl.textContent = "The old Eskimo proverb, seen a little differently — through a dog's eyes.";
