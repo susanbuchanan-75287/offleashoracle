@@ -224,6 +224,7 @@
 <script>
   const SIGNUP_ENDPOINT = 'https://us-central1-binditails-da2de.cloudfunctions.net/oracleSignup';
   const PUSH_ENDPOINT = 'https://us-central1-binditails-da2de.cloudfunctions.net/oraclePushSubscribe';
+  const PUSH_UNSUB_ENDPOINT = 'https://us-central1-binditails-da2de.cloudfunctions.net/oraclePushUnsubscribe';
   const SHARE_URL = 'https://offleashoracle.com/';
   // Bot protection: paste your reCAPTCHA v3 SITE key here to turn it on. Leave
   // empty to keep signups working without it. (The matching SECRET key goes in
@@ -257,6 +258,13 @@
   };
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  let pushOn = false;
+
+  function setPushMode(on){
+    pushOn = on;
+    const b = document.getElementById('push-btn');
+    if (b) b.textContent = on ? '🔕 Turn off notifications' : 'Notify me on this device';
+  }
 
   async function enablePush(){
     const s = document.getElementById('push-status');
@@ -284,10 +292,28 @@
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ token, source:'offleashoracle', company: document.getElementById('push-hp').value, captcha })
       });
-      if (r.ok) { s.textContent = '🔔 You\u2019re set! Your daily Oracle will arrive right here each morning.'; try{ localStorage.setItem('oraclePush','1'); }catch(e){} }
+      if (r.ok) { s.textContent = '🔔 You\u2019re set! Your daily Oracle will arrive right here each morning.'; try{ localStorage.setItem('oraclePush','1'); }catch(e){} setPushMode(true); }
       else if (r.status === 429) { s.textContent = 'Whoa — a few too many tries. Please wait a minute and try again.'; }
       else { s.textContent = 'Something went sideways — try again in a moment.'; }
     } catch(e){ s.textContent = 'Couldn\u2019t enable notifications — please try again.'; }
+  }
+
+  async function disablePush(){
+    const s = document.getElementById('push-status');
+    if (!window.firebase || !firebase.messaging) { s.textContent = 'Couldn\u2019t reach notifications — try again.'; return; }
+    s.textContent = 'Turning off notifications…';
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      const reg = (await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')) || (await navigator.serviceWorker.register('/firebase-messaging-sw.js'));
+      const messaging = firebase.messaging();
+      let tok = '';
+      try { tok = await messaging.getToken({ vapidKey: PUSH_VAPID_KEY, serviceWorkerRegistration: reg }); } catch(e){}
+      if (tok) { try { await fetch(PUSH_UNSUB_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token: tok }) }); } catch(e){} }
+      try { await messaging.deleteToken(); } catch(e){}
+      try { localStorage.removeItem('oraclePush'); } catch(e){}
+      setPushMode(false);
+      s.textContent = 'Notifications are off — no more daily pushes on this device. Turn them back on anytime. 🐾';
+    } catch(e){ s.textContent = 'Couldn\u2019t turn off notifications — please try again.'; }
   }
 
   let oracleQuotes = [
@@ -432,7 +458,8 @@
     }).catch(()=>{ statusEl.textContent = 'Network hiccup — please try again.'; });
   });
 
-  document.getElementById('push-btn').addEventListener('click', enablePush);
+  document.getElementById('push-btn').addEventListener('click', () => pushOn ? disablePush() : enablePush());
+  try { if (('Notification' in window) && Notification.permission === 'granted' && localStorage.getItem('oraclePush') === '1') setPushMode(true); } catch(e){}
 
     e.preventDefault();
     const input = document.getElementById('phone');
