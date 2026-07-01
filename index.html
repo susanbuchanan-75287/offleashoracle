@@ -102,6 +102,7 @@
   .status{min-height:1.2em;font-size:.84rem;font-weight:700;color:var(--gold-bright);margin-top:9px;text-align:center}
   .micro{text-align:center;color:var(--ink-dim);font-size:.8rem;margin-top:16px}
   .consent{color:var(--ink-dim);font-size:.72rem;line-height:1.45;margin:-4px 0 10px}
+  .hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;overflow:hidden;opacity:0}
 
   .about{margin:30px 0;text-align:center;color:var(--ink-soft)}
   .about h2{font-family:'Cormorant Garamond',serif;color:var(--ink);font-size:1.6rem;margin-bottom:12px}
@@ -164,6 +165,7 @@
           <legend>✉️ By email</legend>
           <label for="email">Email address</label>
           <input id="email" name="email" type="email" autocomplete="email" placeholder="you@trailmail.com" required>
+          <input class="hp" id="email-hp" name="company" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
           <button type="submit" class="btn btn-gold">Send my daily reading</button>
           <div class="status" id="email-status" aria-live="polite"></div>
         </fieldset>
@@ -174,6 +176,7 @@
           <label for="phone">Mobile number</label>
           <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555" required>
           <p class="consent">By subscribing you agree to receive recurring automated texts (about 1/day) from The Off-Leash Oracle. Msg &amp; data rates may apply. Reply STOP to cancel, HELP for help.</p>
+          <input class="hp" id="sms-hp" name="company" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
           <button type="submit" class="btn btn-gold">Text me my daily reading</button>
           <div class="status" id="sms-status" aria-live="polite"></div>
         </fieldset>
@@ -209,6 +212,22 @@
 <script>
   const SIGNUP_ENDPOINT = 'https://us-central1-binditails-da2de.cloudfunctions.net/oracleSignup';
   const SHARE_URL = 'https://offleashoracle.com/';
+  // Bot protection: paste your reCAPTCHA v3 SITE key here to turn it on. Leave
+  // empty to keep signups working without it. (The matching SECRET key goes in
+  // Firebase: `firebase functions:secrets:set RECAPTCHA_SECRET`.)
+  const RECAPTCHA_SITE_KEY = '';
+  if (RECAPTCHA_SITE_KEY) {
+    const s = document.createElement('script');
+    s.src = 'https://www.google.com/recaptcha/api.js?render=' + RECAPTCHA_SITE_KEY;
+    document.head.appendChild(s);
+  }
+  function captchaToken(){
+    return new Promise((resolve) => {
+      if (!RECAPTCHA_SITE_KEY || !window.grecaptcha) { resolve(''); return; }
+      try { grecaptcha.ready(() => grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'signup' }).then(resolve).catch(() => resolve(''))); }
+      catch(e){ resolve(''); }
+    });
+  }
 
   let oracleQuotes = [
     "Your dog wakes you early not because they're hungry. They're protecting you from sleeping through your own life.",
@@ -327,11 +346,11 @@
     } catch(e){ copiedEl.textContent = 'Press and hold the quote to copy.'; }
   });
 
-  function signup(method, value, statusEl){
-    return fetch(SIGNUP_ENDPOINT, {
+  function signup(method, value, hp){
+    return captchaToken().then((tk) => fetch(SIGNUP_ENDPOINT, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ method, value, source:'offleashoracle' })
-    }).then(async (r) => {
+      body: JSON.stringify({ method, value, source:'offleashoracle', company: hp || '', token: tk })
+    })).then(async (r) => {
       let body = {}; try { body = await r.json(); } catch(e){}
       return { ok:r.ok, status:r.status, body };
     });
@@ -344,8 +363,10 @@
     if(!email) return;
     const statusEl = document.getElementById('email-status');
     statusEl.textContent = 'Sending your confirmation…';
-    signup('email', email, statusEl).then((res) => {
+    signup('email', email, document.getElementById('email-hp').value).then((res) => {
       if(res.ok){ input.value=''; statusEl.textContent = '✨ Check your inbox to confirm — your first reading is on its way.'; }
+      else if(res.status === 429){ statusEl.textContent = 'Whoa — a few too many tries. Please wait a minute and try again.'; }
+      else if(res.body && res.body.error === 'captcha'){ statusEl.textContent = 'We couldn\u2019t verify you\u2019re human — please try again.'; }
       else { statusEl.textContent = (res.body && res.body.error) ? 'Hmm, that didn\u2019t go through. Try again?' : 'Something went sideways — try again in a moment.'; }
     }).catch(()=>{ statusEl.textContent = 'Network hiccup — please try again.'; });
   });
@@ -357,9 +378,11 @@
     if(!phone) return;
     const statusEl = document.getElementById('sms-status');
     statusEl.textContent = 'Signing you up…';
-    signup('sms', phone, statusEl).then((res) => {
+    signup('sms', phone, document.getElementById('sms-hp').value).then((res) => {
       if(res.ok && res.body && res.body.smsSent){ input.value=''; statusEl.textContent = '✨ Check your phone — reply YES to confirm and your daily reading begins.'; }
       else if(res.ok){ input.value=''; statusEl.textContent = '✨ You\u2019re on the list! Daily texts are launching soon — we\u2019ll text you to confirm the moment they go live. 🐾'; }
+      else if(res.status === 429){ statusEl.textContent = 'Whoa — a few too many tries. Please wait a minute and try again.'; }
+      else if(res.body && res.body.error === 'captcha'){ statusEl.textContent = 'We couldn\u2019t verify you\u2019re human — please try again.'; }
       else if(res.body && res.body.error === 'invalid_phone'){ statusEl.textContent = 'That number didn\u2019t look right — please check and try again.'; }
       else if(res.body && res.body.error === 'sms_not_available'){ statusEl.textContent = 'Texts are launching soon — grab email above for now.'; }
       else { statusEl.textContent = 'Something went sideways — try again in a moment.'; }
