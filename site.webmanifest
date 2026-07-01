@@ -1,0 +1,16 @@
+{
+  "name": "The Off-Leash Oracle",
+  "short_name": "Oracle",
+  "description": "Daily trail wisdom for dogs and the humans who follow them.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101826",
+  "theme_color": "#101826",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
