@@ -101,6 +101,7 @@
   .sub-field .btn{width:100%;justify-content:center}
   .status{min-height:1.2em;font-size:.84rem;font-weight:700;color:var(--gold-bright);margin-top:9px;text-align:center}
   .micro{text-align:center;color:var(--ink-dim);font-size:.8rem;margin-top:16px}
+  .consent{color:var(--ink-dim);font-size:.72rem;line-height:1.45;margin:-4px 0 10px}
 
   .about{margin:30px 0;text-align:center;color:var(--ink-soft)}
   .about h2{font-family:'Cormorant Garamond',serif;color:var(--ink);font-size:1.6rem;margin-bottom:12px}
@@ -172,6 +173,7 @@
           <legend>📱 By text</legend>
           <label for="phone">Mobile number</label>
           <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 555-5555" required>
+          <p class="consent">By subscribing you agree to receive recurring automated texts (about 1/day) from The Off-Leash Oracle. Msg &amp; data rates may apply. Reply STOP to cancel, HELP for help.</p>
           <button type="submit" class="btn btn-gold">Text me my daily reading</button>
           <div class="status" id="sms-status" aria-live="polite"></div>
         </fieldset>
@@ -262,9 +264,8 @@
   const noteEl = document.getElementById('featured-note');
   const pullBtn = document.getElementById('pull-btn');
   let currentQuote = '';
-  let showingYesterday = false;
-  let showingFeatured = true;
-  function featuredIdx(){ const i = oracleQuotes.findIndex(q => q.includes('holes in the floor of heaven')); return i < 0 ? 0 : i; }
+  let cardView = 'today'; // 'today' | 'yesterday' | 'origin' — today auto-shows on load
+  function originIdx(){ const i = oracleQuotes.findIndex(q => q.includes('holes in the floor of heaven')); return i < 0 ? 0 : i; }
 
   function activeSet(){ return oracleQuotes; }
 
@@ -290,17 +291,18 @@
     setShareLinks(q);
   }
   function render(){
-    if (showingFeatured) {
-      showQuote(oracleQuotes[featuredIdx()]);
-      labelEl.textContent = "✨ Featured Reading";
-      pullBtn.textContent = "🌞 See today's reading";
-      noteEl.textContent = "The old Eskimo proverb, seen a little differently — through a dog's eyes.";
+    if (cardView === 'origin') {
+      showQuote(oracleQuotes[originIdx()]);
+      labelEl.textContent = "🌟 The one that started it all";
+      noteEl.textContent = "The old proverb that sparked The Off-Leash Oracle — seen through a dog's eyes.";
+      pullBtn.textContent = "🌞 Back to today's reading";
       return;
     }
     noteEl.textContent = "";
-    showQuote(quoteForDay(showingYesterday ? 1 : 0));
-    labelEl.textContent = showingYesterday ? "Yesterday's Reading" : "Today's Reading";
-    pullBtn.textContent = showingYesterday ? "☀️ Back to today's reading" : "🌙 See yesterday's reading";
+    const yesterday = cardView === 'yesterday';
+    showQuote(quoteForDay(yesterday ? 1 : 0));
+    labelEl.textContent = yesterday ? "Yesterday's Reading" : "Today's Reading";
+    pullBtn.textContent = yesterday ? "🌟 See the one that started it all" : "🌙 See yesterday's reading";
   }
 
   // Load the full canonical dogism set; fall back to the inline list if the fetch fails.
@@ -315,8 +317,7 @@
     .finally(function(){ render(); });
 
   pullBtn.addEventListener('click', () => {
-    if (showingFeatured) { showingFeatured = false; showingYesterday = false; }
-    else { showingYesterday = !showingYesterday; }
+    cardView = cardView === 'today' ? 'yesterday' : cardView === 'yesterday' ? 'origin' : 'today';
     render();
   });
   document.getElementById('copy-share').addEventListener('click', async () => {
@@ -357,7 +358,9 @@
     const statusEl = document.getElementById('sms-status');
     statusEl.textContent = 'Signing you up…';
     signup('sms', phone, statusEl).then((res) => {
-      if(res.ok){ input.value=''; statusEl.textContent = '✨ You\u2019re on the list — reply to confirm when we text you.'; }
+      if(res.ok && res.body && res.body.smsSent){ input.value=''; statusEl.textContent = '✨ Check your phone — reply YES to confirm and your daily reading begins.'; }
+      else if(res.ok){ input.value=''; statusEl.textContent = '✨ You\u2019re on the list! Daily texts are launching soon — we\u2019ll text you to confirm the moment they go live. 🐾'; }
+      else if(res.body && res.body.error === 'invalid_phone'){ statusEl.textContent = 'That number didn\u2019t look right — please check and try again.'; }
       else if(res.body && res.body.error === 'sms_not_available'){ statusEl.textContent = 'Texts are launching soon — grab email above for now.'; }
       else { statusEl.textContent = 'Something went sideways — try again in a moment.'; }
     }).catch(()=>{ statusEl.textContent = 'Network hiccup — please try again.'; });
