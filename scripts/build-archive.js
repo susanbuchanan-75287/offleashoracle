@@ -1,4 +1,76 @@
-<!DOCTYPE html>
+#!/usr/bin/env node
+/**
+ * Builds archive.html from data/oracle-quotes.json.
+ *
+ * The archive is a *drip*: it only reveals readings that have been "published"
+ * so far — one new reading per day — so the collection grows over time instead
+ * of dumping all readings at once. Newest reading appears first.
+ *
+ * Day 1 = LAUNCH (UTC). Reading for day N (1-based) is quotes[(N-1) % length].
+ * This MUST stay in sync with:
+ *   - index.html         (homepage "today's reading" + LAUNCH_UTC)
+ *   - functions/oracle.js quoteForToday() start date (backend email/push send)
+ *
+ * Run locally:  node scripts/build-archive.js
+ * Run in CI:    .github/workflows/daily-archive.yml (daily cron)
+ */
+const fs = require('fs');
+const path = require('path');
+
+// Day 1 of the Oracle (UTC midnight). Keep in sync with index.html + oracle.js.
+const LAUNCH_UTC = Date.UTC(2026, 6, 1); // 2026-07-01
+
+const root = path.join(__dirname, '..');
+const quotes = JSON.parse(fs.readFileSync(path.join(root, 'data', 'oracle-quotes.json'), 'utf8'))
+  .filter(q => typeof q === 'string' && q.trim());
+
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function publishedCount(now = Date.now()) {
+  const days = Math.floor((now - LAUNCH_UTC) / 86400000) + 1; // 1-based day count
+  return Math.max(1, Math.min(days, quotes.length));
+}
+
+const count = publishedCount();
+
+// Newest first: reading No. `count` (today) at the top, down to No. 1.
+const revealed = [];
+for (let n = count; n >= 1; n--) {
+  const q = quotes[(n - 1) % quotes.length];
+  revealed.push({ n, q });
+}
+
+const items = revealed.map(({ n, q }) =>
+`      <li class="arc-item" id="w-${n}" itemscope itemtype="https://schema.org/Quotation">
+        <blockquote itemprop="text">${esc(q)}</blockquote>
+        <cite><span itemprop="spokenByCharacter">The Off-Leash Oracle&trade;</span> &middot; No.&nbsp;${n}</cite>
+        <a class="arc-permalink" href="#w-${n}" aria-label="Permalink to reading ${n}">#</a>
+      </li>`).join('\n');
+
+const readingWord = count === 1 ? 'reading' : 'readings';
+const ld = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "The Wisdom Archive — The Off-Leash Oracle",
+  "description": `Every trail truth the Off-Leash Oracle has spoken so far — ${count} ${readingWord} of cosmic dog wisdom, with a new one added each day.`,
+  "url": "https://offleashoracle.com/archive.html",
+  "isPartOf": { "@type": "WebSite", "name": "The Off-Leash Oracle", "url": "https://offleashoracle.com/" },
+  "publisher": { "@type": "Organization", "name": "Joy, Thee & Me LLC" }
+};
+const breadcrumb = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://offleashoracle.com/" },
+    { "@type": "ListItem", "position": 2, "name": "Wisdom Archive", "item": "https://offleashoracle.com/archive.html" }
+  ]
+};
+
+const lede = count === 1
+  ? `The Oracle has spoken just once so far — this is where every reading will gather. A new trail truth is added here each morning, so the collection grows a little wiser every day.`
+  : `One reading arrives each morning, and this is where they gather. So far the dogs have offered ${count} small, four-pawed truths — a new one lands here every day.`;
+
+const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -29,42 +101,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  "name": "The Wisdom Archive — The Off-Leash Oracle",
-  "description": "Every trail truth the Off-Leash Oracle has spoken so far — 1 reading of cosmic dog wisdom, with a new one added each day.",
-  "url": "https://offleashoracle.com/archive.html",
-  "isPartOf": {
-    "@type": "WebSite",
-    "name": "The Off-Leash Oracle",
-    "url": "https://offleashoracle.com/"
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "Joy, Thee & Me LLC"
-  }
-}
+${JSON.stringify(ld, null, 2)}
 </script>
 <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-      "item": "https://offleashoracle.com/"
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "Wisdom Archive",
-      "item": "https://offleashoracle.com/archive.html"
-    }
-  ]
-}
+${JSON.stringify(breadcrumb, null, 2)}
 </script>
 <style>
   :root{
@@ -142,18 +182,14 @@
   <section class="arc-hero">
     <span class="eyebrow">The Wisdom Archive</span>
     <h1>Every <span class="glow">trail truth</span> the Oracle has spoken.</h1>
-    <p class="arc-lede">The Oracle has spoken just once so far — this is where every reading will gather. A new trail truth is added here each morning, so the collection grows a little wiser every day.</p>
-    <div class="arc-count">1 reading &middot; and counting</div>
+    <p class="arc-lede">${lede}</p>
+    <div class="arc-count">${count} ${readingWord} &middot; and counting</div>
     <a class="arc-cta" href="/#subscribe">Get a fresh one every morning &rarr;</a>
   </section>
 
   <section aria-label="All readings">
     <ol class="arc-list">
-      <li class="arc-item" id="w-1" itemscope itemtype="https://schema.org/Quotation">
-        <blockquote itemprop="text">They are not stars in the sky but holes in the floor of heaven, where the dogs who loved us first press one eye down to check that we are walking well.</blockquote>
-        <cite><span itemprop="spokenByCharacter">The Off-Leash Oracle&trade;</span> &middot; No.&nbsp;1</cite>
-        <a class="arc-permalink" href="#w-1" aria-label="Permalink to reading 1">#</a>
-      </li>
+${items}
     </ol>
   </section>
   </main>
@@ -175,3 +211,7 @@
 </footer>
 </body>
 </html>
+`;
+
+fs.writeFileSync(path.join(root, 'archive.html'), html, 'utf8');
+console.log(`archive.html built: ${count} ${readingWord} revealed (of ${quotes.length}).`);

@@ -399,13 +399,19 @@
 
   function activeSet(){ return oracleQuotes; }
 
-  // Stable day number (days since epoch), so the same card shows all day.
-  function dayNumber(offset){
-    return Math.floor(Date.now() / 86400000) - (offset || 0);
+  // Day 1 = LAUNCH (UTC). Keep in sync with scripts/build-archive.js and functions/oracle.js.
+  const LAUNCH_UTC = Date.UTC(2026, 6, 1); // 2026-07-01
+  function publishedCount(){
+    const set = activeSet();
+    const days = Math.floor((Date.now() - LAUNCH_UTC) / 86400000) + 1;
+    return Math.max(1, Math.min(days, set.length));
   }
+  function hasYesterday(){ return publishedCount() >= 2; }
+  // offset 0 = today's (newest) reading, 1 = yesterday's, ...
   function quoteForDay(offset){
     const set = activeSet();
-    const idx = ((dayNumber(offset) % set.length) + set.length) % set.length;
+    const n = publishedCount() - (offset || 0);
+    const idx = (((n - 1) % set.length) + set.length) % set.length;
     return set[idx];
   }
   function setShareLinks(q){
@@ -424,7 +430,7 @@
     if (cardView === 'origin') {
       showQuote(oracleQuotes[originIdx()]);
       labelEl.textContent = "🌟 The one that started it all";
-      noteEl.textContent = "The old proverb that sparked The Off-Leash Oracle — seen through a dog's eyes.";
+      noteEl.textContent = "The very first reading — the old proverb that sparked The Off-Leash Oracle, seen through a dog's eyes.";
       pullBtn.textContent = "🌞 Back to today's reading";
       return;
     }
@@ -432,7 +438,7 @@
     const yesterday = cardView === 'yesterday';
     showQuote(quoteForDay(yesterday ? 1 : 0));
     labelEl.textContent = yesterday ? "Yesterday's Reading" : "Today's Reading";
-    pullBtn.textContent = yesterday ? "🌟 See the one that started it all" : "🌙 See yesterday's reading";
+    pullBtn.textContent = (yesterday || !hasYesterday()) ? "🌟 See the one that started it all" : "🌙 See yesterday's reading";
   }
 
   // Load the full canonical dogism set; fall back to the inline list if the fetch fails.
@@ -447,7 +453,9 @@
     .finally(function(){ render(); });
 
   pullBtn.addEventListener('click', () => {
-    cardView = cardView === 'today' ? 'yesterday' : cardView === 'yesterday' ? 'origin' : 'today';
+    if (cardView === 'today') cardView = hasYesterday() ? 'yesterday' : 'origin';
+    else if (cardView === 'yesterday') cardView = 'origin';
+    else cardView = 'today';
     render();
   });
   document.getElementById('copy-share').addEventListener('click', async () => {
