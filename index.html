@@ -102,6 +102,7 @@
   .status{min-height:1.2em;font-size:.84rem;font-weight:700;color:var(--gold-bright);margin-top:9px;text-align:center}
   .micro{text-align:center;color:var(--ink-dim);font-size:.8rem;margin-top:16px}
   .consent{color:var(--ink-dim);font-size:.72rem;line-height:1.45;margin:-4px 0 10px}
+  .push-lede{color:var(--ink-soft);font-size:.82rem;line-height:1.45;margin:0 0 13px}
   .hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;overflow:hidden;opacity:0}
 
   .about{margin:30px 0;text-align:center;color:var(--ink-soft)}
@@ -181,6 +182,15 @@
           <div class="status" id="sms-status" aria-live="polite"></div>
         </fieldset>
       </form>
+      <div class="sub-field" id="push-field">
+        <fieldset>
+          <legend>🔔 By push</legend>
+          <p class="push-lede">Get the daily reading as a notification right on this device — no email or phone number needed. Free, and you can turn it off anytime.</p>
+          <input class="hp" id="push-hp" name="company" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button type="button" class="btn btn-gold" id="push-btn">Notify me on this device</button>
+          <div class="status" id="push-status" aria-live="polite"></div>
+        </fieldset>
+      </div>
     </div>
     <p class="micro">We send one reading a day and nothing else. No spam, no selling your info — just trail truth. 🐾</p>
   </section>
@@ -209,8 +219,11 @@
   </div>
 </footer>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script>
   const SIGNUP_ENDPOINT = 'https://us-central1-binditails-da2de.cloudfunctions.net/oracleSignup';
+  const PUSH_ENDPOINT = 'https://us-central1-binditails-da2de.cloudfunctions.net/oraclePushSubscribe';
   const SHARE_URL = 'https://offleashoracle.com/';
   // Bot protection: paste your reCAPTCHA v3 SITE key here to turn it on. Leave
   // empty to keep signups working without it. (The matching SECRET key goes in
@@ -227,6 +240,54 @@
       try { grecaptcha.ready(() => grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'signup' }).then(resolve).catch(() => resolve(''))); }
       catch(e){ resolve(''); }
     });
+  }
+
+  // ── Web push (Firebase Cloud Messaging) ──────────────────────────────────
+  // Free daily notifications, no email/phone needed. Paste your Web Push
+  // certificate "Key pair" (VAPID public key) below to turn it on — Firebase
+  // console → Project settings → Cloud Messaging → Web Push certificates.
+  const PUSH_VAPID_KEY = 'BPhfMyXA0u3qoaknWZToDqkY3gkHosnbGZn-9CtmEd92kVQx69On5GO_H-XdSVFkfSvYtmvcRX1S0m-iSHqea48';
+  const FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyAVU4PeZJI8xqo7YOm8QiKvryEVXuv9gLk',
+    authDomain: 'binditails-da2de.firebaseapp.com',
+    projectId: 'binditails-da2de',
+    storageBucket: 'binditails-da2de.firebasestorage.app',
+    messagingSenderId: '376117416695',
+    appId: '1:376117416695:web:f11c59342cc6a750d739f2'
+  };
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+  async function enablePush(){
+    const s = document.getElementById('push-status');
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !window.firebase || !firebase.messaging) {
+      s.textContent = 'This browser doesn\u2019t support push — grab email above instead.'; return;
+    }
+    // iOS/iPadOS only delivers web push when the site is installed to the Home Screen.
+    if (isIOS && !isStandalone) {
+      s.textContent = 'On iPhone/iPad: tap Share → “Add to Home Screen,” open it from there, then enable notifications. 🐾'; return;
+    }
+    if (!PUSH_VAPID_KEY) { s.textContent = 'Push notifications are almost ready — check back shortly. 🔔'; return; }
+    s.textContent = 'Setting up your notifications…';
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        s.textContent = 'No worries — allow notifications anytime to get your daily reading right here.'; return;
+      }
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      const messaging = firebase.messaging();
+      const token = await messaging.getToken({ vapidKey: PUSH_VAPID_KEY, serviceWorkerRegistration: reg });
+      if (!token) { s.textContent = 'Couldn\u2019t set up notifications — please try again.'; return; }
+      const captcha = await captchaToken();
+      const r = await fetch(PUSH_ENDPOINT, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ token, source:'offleashoracle', company: document.getElementById('push-hp').value, captcha })
+      });
+      if (r.ok) { s.textContent = '🔔 You\u2019re set! Your daily Oracle will arrive right here each morning.'; try{ localStorage.setItem('oraclePush','1'); }catch(e){} }
+      else if (r.status === 429) { s.textContent = 'Whoa — a few too many tries. Please wait a minute and try again.'; }
+      else { s.textContent = 'Something went sideways — try again in a moment.'; }
+    } catch(e){ s.textContent = 'Couldn\u2019t enable notifications — please try again.'; }
   }
 
   let oracleQuotes = [
@@ -371,7 +432,8 @@
     }).catch(()=>{ statusEl.textContent = 'Network hiccup — please try again.'; });
   });
 
-  document.getElementById('sms-form').addEventListener('submit', (e) => {
+  document.getElementById('push-btn').addEventListener('click', enablePush);
+
     e.preventDefault();
     const input = document.getElementById('phone');
     const phone = input.value.trim();
