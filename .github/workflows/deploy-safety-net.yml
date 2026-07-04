@@ -1,0 +1,76 @@
+name: Deploy safety net
+
+# offleashoracle.com is served by GitHub Pages (legacy build) from the `main`
+# branch, so every push to `main` publishes production automatically.
+#
+# This workflow wraps that auto-deploy with two safeguards:
+#   1. validate  - a lightweight gate that fails the run (and shows a red check
+#                  on PRs) if the site's data or the archive build is broken.
+#   2. tag_release - after a push to `main`, stamp an immutable rollback point
+#                    `deploy-<utc>-<sha>` marking the known-good deployed commit.
+#                    We keep the newest 30 and prune older ones.
+#
+# To roll back: `git checkout <deploy-tag>` (or reset `main` to it) and push.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    # Runs on every push to main and on every PR into main. A red check here
+    # signals the site is broken BEFORE (push) / instead of (PR) going live.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate data JSON files parse
+        run: |
+          set -e
+          for f in data/*.json; do
+            echo "Checking $f"
+            node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"
+          done
+          echo "All data/*.json files are valid JSON."
+
+      - name: Smoke-test the archive build
+        # Must not throw; keeps build-archive.js in sync with the data files.
+        run: node scripts/build-archive.js
+
+  tag_release:
+    # After a successful production push, create an immutable rollback point.
+    # Each tag marks a known-good, deployed commit. We keep the newest 30 and
+    # prune older ones so the tag list stays manageable.
+    needs: validate
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag this production release
+        run: |
+          set -e
+          TAG="deploy-$(date -u +%Y-%m-%d-%H%M%S)-${GITHUB_SHA::7}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Production deploy of ${GITHUB_SHA} to GitHub Pages"
+          git push origin "$TAG"
+          echo "Tagged rollback point: $TAG"
+          # Keep the 30 most recent deploy-* tags; delete the rest locally and on origin.
+          git tag -l 'deploy-*' | sort -r | tail -n +31 | while read -r OLD; do
+            git push origin ":refs/tags/$OLD" 2>/dev/null || true
+            git tag -d "$OLD" 2>/dev/null || true
+          done

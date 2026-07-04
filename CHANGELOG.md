@@ -6,6 +6,17 @@ Operated by **Joy, Thee & Me LLC**.
 
 ---
 
+## [2026-07-04] — Deploy safety net (CI)
+
+### Added
+- **`.github/workflows/deploy-safety-net.yml`** — wraps the GitHub Pages auto-deploy with (1) a `validate` gate that parses every `data/*.json` file and smoke-tests `node scripts/build-archive.js` on every push and PR to `main`, and (2) a `tag_release` job that stamps each production deploy with an immutable rollback tag `deploy-<utc>-<sha>` (newest 30 kept). Mirrors the deploy-guardrails pattern already used on barkparks, binditails, and myhoadues.
+- **Branch protection on `main`** — pull request required before merge, keeping the auto-published branch reviewable.
+
+### Changed
+- **`CHANGE-CONTROL.md`** — corrected branch from `master` to the actual default `main`; documented hosting as GitHub Pages legacy build; added §5 "Deploy safety net & rollback" with rollback steps.
+
+---
+
 ## [2026-07-04] — Legal & compliance foundation
 
 ### Added
