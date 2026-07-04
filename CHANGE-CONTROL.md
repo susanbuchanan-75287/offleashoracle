@@ -34,8 +34,8 @@ This register is the authoritative, timestamped map of legal-document versions. 
 
 | Document | Version | Effective date | Superseded on | Commit (SHA) | Notes |
 |---|---|---|---|---|---|
-| `privacy.html` | v1.0 | 2026-07-04 | — (current) | _set on merge_ | Initial publication of Privacy Policy. |
-| `terms.html` | v1.0 | 2026-07-04 | — (current) | _set on merge_ | Initial publication of Terms of Use. |
+| `privacy.html` | v1.0 | 2026-07-04 | — (current) | `0230900247dd6ffb3b99f5c3eca15810ffba9cdc` | Initial publication of Privacy Policy. |
+| `terms.html` | v1.0 | 2026-07-04 | — (current) | `0230900247dd6ffb3b99f5c3eca15810ffba9cdc` | Initial publication of Terms of Use. |
 
 > How to fill "Commit (SHA)": after the PR merges, run `git log -1 --format=%H -- privacy.html`
 > (and `terms.html`) and paste the full SHA into the matching row. When a document is
