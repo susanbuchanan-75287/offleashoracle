@@ -65,8 +65,12 @@ git reset --hard <deploy-tag> && git push --force-with-lease origin main
 ```
 Because Pages redeploys on push, restoring `main` to a known-good tag re-publishes it.
 
-`main` is protected (PR required before merge). The daily archive job
-(`daily-archive.yml`) is the one allowed automated exception that commits directly.
+`main` is protected by a repository ruleset (PR required before merge + required
+`validate` check; repo admin bypasses). The built-in `GITHUB_TOKEN` **cannot** bypass
+this ruleset, so the daily archive job (`daily-archive.yml`) — the one allowed automated
+committer to `main` — authenticates its push with a repository secret **`ARCHIVE_PUSH_TOKEN`**,
+a fine-grained PAT of the repo admin (`susanbuchanan-75287`, `contents: read/write` on this
+repo only). Rotate the PAT before it expires or the daily drip will stop publishing.
 
 ## 6. How to produce a legal document "as of" a specific date (for counsel / audit)
 
