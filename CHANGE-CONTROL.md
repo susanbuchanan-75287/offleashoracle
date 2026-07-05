@@ -5,7 +5,7 @@
 > timestamped record of every change). Governance principle: **every published document
 > is versioned, dated, and reconstructable to the exact wording live on any date.**
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 ---
 
@@ -42,6 +42,16 @@ This register is the authoritative, timestamped map of legal-document versions. 
 > (and `terms.html`) and paste the full SHA into the matching row. When a document is
 > revised, add a **new row** for the new version and set the prior row's "Superseded on"
 > to the new version's effective date. Never delete rows — the register is append-only.
+
+## 4. Security hardening log
+
+GitHub Pages cannot set custom HTTP response headers, so all client-side security controls
+are delivered via `<meta http-equiv>` / `<meta name>` tags in each page's `<head>`. HTTPS and
+HSTS are provided automatically by the GitHub Pages edge.
+
+| Date | Change | Files |
+|---|---|---|
+| 2026-07-05 | **Enterprise CSP + header hardening.** Tightened Content-Security-Policy to add `frame-ancestors 'none'` and `object-src 'none'` (clickjacking + plugin/embed lockdown); added `<meta name="referrer" content="strict-origin-when-cross-origin">` and `<meta http-equiv="X-Content-Type-Options" content="nosniff">` to every page. `index.html` CSP scopes script/style/font/connect to the exact Firebase, reCAPTCHA (google.com), Google Fonts, and Cloud Functions / *.googleapis / fcmregistrations / firebaseinstallations origins actually used. | `index.html`, `archive.html`, `privacy.html`, `terms.html` |
 
 ## 5. Deploy safety net & rollback
 
