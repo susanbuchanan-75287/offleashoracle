@@ -1,0 +1,118 @@
+rules_version = '2';
+// ============================================================================
+// BindiTails + BarkParks — UNIFIED Firestore rules  (project: binditails-da2de)
+// Proposed 2026-06-21. UNION of: live deployed rules + the barkparks repo
+// ruleset + fixes for collections the app CODE uses but no rule covered
+// (which Firestore was silently DENYING in production).
+//
+// HOW TO USE: review, paste into Firebase Console → Firestore → Rules, test the
+// affected paths in the Rules Playground, then Publish. Do NOT blind-deploy.
+// Lines marked NEW / FIX are the additions vs the current live rules.
+// ============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Admin = any of: email allowlist (live) OR uid allowlist (barkparks) OR
+    // a custom 'admin' claim. Merged so BOTH apps' admin checks keep working.
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email in [
+          "susanbu@microsoft.com",
+          "hello@binditails.com",
+          "susanbuchanan@yahoo.com",
+          "rexreece@hotmail.com",
+          "binditails@yahoo.com",
+          "susan@myhoadues.com"
+        ]
+        || request.auth.uid in [
+          "tJ0AAXPDtbOYmQmCUA2De0WV1eb2",
+          "U5NrNIG2rKN1FYJ0COZZFRcXdOB3"
+        ]
+        || request.auth.token.admin == true
+      );
+    }
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── Business / admin-only collections (LIVE) ────────────────────────────
+    match /admin/{docId}         { allow read, write: if isAdmin(); }
+    match /ledger/{docId}        { allow read, write: if isAdmin(); }
+    match /todos/{docId}         { allow read, write: if isAdmin(); }
+    match /deductions/{docId}    { allow read, write: if isAdmin(); }
+    match /travel_logs/{docId}   { allow read, write: if isAdmin(); }
+    match /crm_contacts/{docId}  { allow read, write: if isAdmin(); }
+    match /crm_activities/{docId}{ allow read, write: if isAdmin(); }
+    match /crm_deals/{docId}     { allow read, write: if isAdmin(); }
+    match /banned-users/{docId}     { allow read, write: if isAdmin(); } // NEW (admin-moderation.html)
+    match /moderation-log/{docId}   { allow read, write: if isAdmin(); } // NEW (admin-moderation.html)
+    match /moderation-queue/{docId} { allow read, write: if isAdmin(); } // from barkparks repo
+
+    // ── Admin todos + accounting (owner or admin); recursive covers subcols
+    //    like /docs and /items used by data-layer/admin-todos ──────────────
+    match /barkparks_todos/{userId}/{document=**} { allow read, write: if isOwner(userId) || isAdmin(); }
+    match /barkparks_data/{userId}/{document=**}  { allow read, write: if isOwner(userId) || isAdmin(); }
+    match /binditails_data/{userId}/{document=**} { allow read, write: if isOwner(userId) || isAdmin(); } // NEW (data-layer SITE_ID=binditails)
+    match /app_data/{userId}/{document=**}        { allow read, write: if isOwner(userId) || isAdmin(); } // NEW (data-layer SITE_ID fallback)
+
+    // ── Per-user data (owner only) ─────────────────────────────────────────
+    match /users/{userId}/{document=**} { allow read, write: if isOwner(userId); } // FIX recursive — covers users/{uid}/stamps subcollection (paw-passport stamps)
+    match /user_profiles/{userId}  { allow read, write: if isOwner(userId); } // NEW (my-account.html)
+    match /treasure_hunts/{userId} { allow read, write: if isOwner(userId); } // NEW (trail-maps.html)
+
+    // FIX: live rule was `match /passports/{userId}` which only covers the
+    // passport DOC, NOT its /stamps subcollection — so passport stamps were
+    // being DENIED. The recursive {document=**} fixes the core stamp feature.
+    match /passports/{userId}/{document=**} { allow read, write: if isOwner(userId); } // FIX (was non-recursive)
+
+    // ── Leaderboards ───────────────────────────────────────────────────────
+    match /leaderboard/{docId} { // LIVE generic leaderboard
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.uid;
+    }
+    match /barkparks_leaderboard/{userId}  { allow read: if request.auth != null; allow write: if isOwner(userId); } // NEW
+    match /binditails_leaderboard/{userId} { allow read: if request.auth != null; allow write: if isOwner(userId); } // NEW
+    match /app_leaderboard/{userId}        { allow read: if request.auth != null; allow write: if isOwner(userId); } // NEW
+
+    // ── Global / settings (authed read, admin write) ───────────────────────
+    match /barkparks_global/{document=**}  { allow read: if request.auth != null; allow write: if isAdmin(); } // NEW
+    match /binditails_global/{document=**} { allow read: if request.auth != null; allow write: if isAdmin(); } // NEW
+    match /app_global/{document=**}        { allow read: if request.auth != null; allow write: if isAdmin(); } // NEW
+    match /settings/{docId} { allow read: if true; } // LIVE (public read of site settings)
+    // config/admin_users is read by admin-auth.js to resolve admin status.
+    // Writes are console-only. NOTE: authed users can read the admin email list
+    // here — acceptable for the current client-side admin check, but revisit.
+    match /config/{docId} { allow read: if request.auth != null; allow write: if false; } // NEW
+
+    // ── Public submission inboxes: anyone may submit, only admin reads ──────
+    // `create: if true` matches the existing live park-submissions pattern so
+    // anonymous visitors on public pages can actually submit. Spam mitigation
+    // (App Check / a Cloud Function) is the proper next layer — see TODO.
+    match /park-submissions/{docId} { allow create: if true; allow read, update, delete: if isAdmin(); } // LIVE
+    match /newsletter/{docId}          { allow create: if true; allow read: if isAdmin(); } // NEW (homepage/quiz/trip-planner)
+    match /contact-submissions/{docId} { allow create: if true; allow read: if isAdmin(); } // NEW (contact.html)
+    match /membership-waitlist/{docId} { allow create: if true; allow read: if isAdmin(); } // NEW (membership.html)
+    match /error_logs/{document=**}    { allow create: if request.auth != null; allow read: if isAdmin(); } // NEW (error-logger.js)
+    match /photo-submissions/{docId} { // from barkparks repo
+      allow create: if request.auth != null;
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow update: if isAdmin();
+    }
+    match /park-reports/{docId} { allow create: if request.auth != null; allow read, update: if isAdmin(); } // from barkparks repo
+
+    // ── Park reviews / ratings (LIVE) ──────────────────────────────────────
+    match /ratings/{parkId}/reviews/{reviewId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Site analytics (LIVE) ──────────────────────────────────────────────
+    match /site_visits/{docId} { allow create: if true; allow read: if isAdmin(); }
+
+    // NOTE: intentionally NO `match /{document=**}` catch-all. Under
+    // rules_version '2' any path not matched above is denied by default, so
+    // dormant collections (packLeaders, checkins) stay locked. Add explicit
+    // rules ONLY if a feature needs them.
+  }
+}

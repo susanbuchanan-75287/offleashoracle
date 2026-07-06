@@ -6,6 +6,22 @@ Operated by **Joy, Thee & Me LLC**.
 
 ---
 
+## [2026-07-06] — Backend audit snapshot committed to repo
+
+### Added
+- **v-board MED #2 — backend source now auditable/recoverable from this repo.** The Off-Leash Oracle backend (`functions/oracle.js` + `firestore.rules`) is version-controlled in the sibling **barkparks** repo (Firebase project `binditails-da2de`) and was already documented in `DISASTER-RECOVERY.md` §3 and `REBUILD.md` §3 — but an auditor reading only *this* repo could not see or recover it. Added a clearly-labeled **read-only audit mirror** at `backend-snapshot/` so the backend code is visible and recoverable directly from the offleashoracle repo.
+
+### Files
+- `backend-snapshot/README.md` — labels the folder as a read-only mirror; canonical source = barkparks, project `binditails-da2de`; snapshot date; SHA-256 hashes; explicit "do NOT deploy from here — deploy per DISASTER-RECOVERY.md §3."
+- `backend-snapshot/oracle.js` — snapshot of `barkparks/functions/oracle.js` (SHA-256 `86571069…848F`).
+- `backend-snapshot/firestore.rules` — snapshot of `barkparks/firestore.rules` (SHA-256 `53DA1929…436E`).
+- `backend-snapshot/functions-package.json` — snapshot of `barkparks/functions/package.json`.
+
+### Note
+- **Not a second deploy source.** The canonical deploy path remains `barkparks/functions` → `firebase deploy`. This mirror exists only for auditability + recovery and must be re-synced (with updated hashes) whenever the canonical backend changes materially.
+
+---
+
 ## [2026-07-06] — Archive-generator security/legal regression fix
 
 ### Fixed
