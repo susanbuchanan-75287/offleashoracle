@@ -5,7 +5,7 @@
 > timestamped record of every change). Governance principle: **every published document
 > is versioned, dated, and reconstructable to the exact wording live on any date.**
 
-Last updated: 2026-07-06 (push + safety-net close-out, §8)
+Last updated: 2026-07-06 (v-board LOW #3/#4 residual close-out, §4)
 
 ---
 
@@ -53,6 +53,8 @@ HSTS are provided automatically by the GitHub Pages edge.
 |---|---|---|
 | 2026-07-05 | **Enterprise CSP + header hardening.** Tightened Content-Security-Policy to add `frame-ancestors 'none'` and `object-src 'none'` (clickjacking + plugin/embed lockdown); added `<meta name="referrer" content="strict-origin-when-cross-origin">` and `<meta http-equiv="X-Content-Type-Options" content="nosniff">` to every page. `index.html` CSP scopes script/style/font/connect to the exact Firebase, reCAPTCHA (google.com), Google Fonts, and Cloud Functions / *.googleapis / fcmregistrations / firebaseinstallations origins actually used. | `index.html`, `archive.html`, `privacy.html`, `terms.html` |
 | 2026-07-06 | **Archive-generator regression fix (v-board HIGH #1).** The daily-archive generator template omitted the Phase-1 security meta (CSP / `nosniff` / referrer) and the Privacy/Terms footer links, so each daily rebuild silently overwrote the hardened committed `archive.html` with a weaker page — reintroducing the security + legal-linkage regression once per day. Baked the exact Phase-1 hardened `<head>` meta and the `Privacy` + `Terms` footer links into the generator template so regenerated output matches the hardened baseline permanently. | `scripts/build-archive.js`, `archive.html` |
+| 2026-07-06 | **Reading-count divergence residual (v-board LOW #3) — self-resolved post-launch.** `index.html` (L412-417) and `scripts/build-archive.js` (L21, L29-34) use byte-identical launch-gate logic (`LAUNCH_UTC = Date.UTC(2026,6,1)`; `publishedCount = Math.max(1, Math.min(days, set.length))`). Pre-launch both clamp to 1; the flagged divergence was a pre-launch artifact only. Post-launch (now) generator and homepage converge deterministically by design (intended daily drip). No code change required. | `index.html`, `scripts/build-archive.js` (analysis only) |
+| 2026-07-06 | **CSP `unsafe-inline` residual (v-board LOW #4) — host-constrained.** Homepage CSP `script-src` allows `'unsafe-inline'`; GitHub Pages offers no per-request nonce/hash injection, so a strict nonce-based CSP is unachievable on this host. `frame-ancestors 'none'` / `object-src 'none'` / `base-uri 'self'` remain enforced. Accepted documented residual; nonce-based script-src is the honest next step only if migrating off GitHub Pages. | `index.html` (documented residual) |
 | 2026-07-06 | **Backend audit snapshot (v-board MED #2).** The backend (`functions/oracle.js` + `firestore.rules`, Firebase project `binditails-da2de`) is version-controlled in the sibling **barkparks** repo and documented in `DISASTER-RECOVERY.md` §3 / `REBUILD.md` §3, but was not visible from this repo — an auditor reading only offleashoracle could not see or recover it. Added a labeled **read-only audit mirror** at `backend-snapshot/` (README with canonical source, snapshot date, SHA-256 hashes, and an explicit "do NOT deploy from here"). Canonical deploy path is unchanged (`barkparks/functions` → `firebase deploy`); mirror must be re-synced with updated hashes on material backend change. | `backend-snapshot/README.md`, `backend-snapshot/oracle.js`, `backend-snapshot/firestore.rules`, `backend-snapshot/functions-package.json` |
 
 ## 5. Deploy safety net & rollback

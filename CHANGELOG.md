@@ -6,6 +6,17 @@ Operated by **Joy, Thee & Me LLC**.
 
 ---
 
+## [2026-07-06] — v-board residual close-out (LOW #3, LOW #4)
+
+### Documented residuals (no code change — analysis + governance only)
+- **Reading-count divergence (v-board LOW #3) — self-resolved post-launch.** The v-board flagged that the generated `archive.html` reading count could diverge from the committed page. Root cause: both `index.html` (L412-417) and `scripts/build-archive.js` (L21, L29-34) use byte-identical launch-gate logic — `LAUNCH_UTC = Date.UTC(2026, 6, 1)` and `publishedCount = Math.max(1, Math.min(days, set.length))`. Pre-launch both clamp to 1, so any divergence was a pre-launch artifact only. Post-launch (current date > launch) the day-count and the committed page converge deterministically by design (intended daily-drip). Confirmed generator and homepage are in sync; no code change required.
+- **`index.html` CSP `unsafe-inline` (v-board LOW #4) — host-constrained residual.** The homepage CSP `script-src` allows `'unsafe-inline'`. GitHub Pages provides no per-request nonce/hash injection mechanism, so a strict nonce-based CSP is not achievable on this host without moving off GitHub Pages. Accepted as a documented host-constrained residual; `frame-ancestors 'none'`, `object-src 'none'`, and `base-uri 'self'` remain enforced. Honest next step (if ever migrating hosts): nonce-based script-src.
+
+### Note
+- No code changed — these are analysis/governance close-outs of the two remaining LOW v-board findings. All v-board findings for offleashoracle are now resolved (fixed or documented residual).
+
+---
+
 ## [2026-07-06] — Web push (FCM) + deploy safety net verified live (close-out)
 
 ### Verified
