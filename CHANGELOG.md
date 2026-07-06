@@ -6,6 +6,13 @@ Operated by **Joy, Thee & Me LLC**.
 
 ---
 
+## [2026-07-05] — Performance: preconnect to Firebase CDN
+
+### Changed
+- **`index.html`** — added `<link rel="preconnect" href="https://www.gstatic.com" crossorigin>` so the browser opens the TLS connection to the Firebase SDK CDN (`www.gstatic.com`, source of `firebase-app-compat.js` / `firebase-messaging-compat.js`) earlier in the critical path. Complements the existing Google Fonts preconnects. Lighthouse performance already measured **99/100** (LCP 0.8s, TBT 0ms, CLS 0.009) prior to this change; this is a marginal connection-warm-up refinement, verified non-regressive.
+
+---
+
 ## [2026-07-04] — Deploy safety net (CI)
 
 ### Added
