@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Static GitHub Pages site — no npm/package.json. GitHub Actions workflows
+  # (daily-archive, deploy-safety-net) are the only dependency surface.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "susanbuchanan-75287"
+    labels:
+      - "security"
+      - "dependencies"
+    commit-message:
+      prefix: "security"
+      include: "scope"
