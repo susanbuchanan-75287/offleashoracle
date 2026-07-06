@@ -52,6 +52,7 @@ HSTS are provided automatically by the GitHub Pages edge.
 | Date | Change | Files |
 |---|---|---|
 | 2026-07-05 | **Enterprise CSP + header hardening.** Tightened Content-Security-Policy to add `frame-ancestors 'none'` and `object-src 'none'` (clickjacking + plugin/embed lockdown); added `<meta name="referrer" content="strict-origin-when-cross-origin">` and `<meta http-equiv="X-Content-Type-Options" content="nosniff">` to every page. `index.html` CSP scopes script/style/font/connect to the exact Firebase, reCAPTCHA (google.com), Google Fonts, and Cloud Functions / *.googleapis / fcmregistrations / firebaseinstallations origins actually used. | `index.html`, `archive.html`, `privacy.html`, `terms.html` |
+| 2026-07-06 | **Archive-generator regression fix (v-board HIGH #1).** The daily-archive generator template omitted the Phase-1 security meta (CSP / `nosniff` / referrer) and the Privacy/Terms footer links, so each daily rebuild silently overwrote the hardened committed `archive.html` with a weaker page — reintroducing the security + legal-linkage regression once per day. Baked the exact Phase-1 hardened `<head>` meta and the `Privacy` + `Terms` footer links into the generator template so regenerated output matches the hardened baseline permanently. | `scripts/build-archive.js`, `archive.html` |
 
 ## 5. Deploy safety net & rollback
 

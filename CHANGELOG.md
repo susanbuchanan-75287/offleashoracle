@@ -6,6 +6,17 @@ Operated by **Joy, Thee & Me LLC**.
 
 ---
 
+## [2026-07-06] — Archive-generator security/legal regression fix
+
+### Fixed
+- **v-board HIGH #1 — daily archive rebuild silently weakened the site.** The `scripts/build-archive.js` template did not include the Phase-1 hardened `<head>` security meta (`Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `referrer`) or the `Privacy` / `Terms` footer links. The daily `daily-archive.yml` cron regenerates `archive.html` and force-pushes it to `main`, so every night it overwrote the hardened committed page with a weaker one (security headers dropped, legal links missing). Baked the exact hardened meta + `Privacy`/`Terms` footer links into the generator template so regenerated output permanently matches the enterprise baseline.
+
+### Files
+- `scripts/build-archive.js` — generator template now emits CSP/nosniff/referrer meta + Privacy/Terms footer links.
+- `archive.html` — regenerated from the fixed template (verified: meta present, `/privacy.html` + `/terms.html` links present).
+
+---
+
 ## [2026-07-06] — Operational docs + subscriber backup/restore
 
 ### Added
