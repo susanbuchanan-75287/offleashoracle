@@ -6,6 +6,13 @@ Operated by **Joy, Thee & Me LLC**.
 
 ---
 
+## [2026-07-06] — Accessibility: main landmark
+
+### Changed
+- **`index.html`** — wrapped the primary page content (hero + subscribe/oracle sections, between `</header>` and `<footer>`) in a `<main>` element. Resolves the Lighthouse accessibility audit `landmark-one-main` failure ("Document does not have a main landmark"), which lets assistive-technology users jump straight to the primary content. Accessibility score was **98/100** prior to this change; other categories unaffected.
+
+---
+
 ## [2026-07-05] — Performance: preconnect to Firebase CDN
 
 ### Changed
