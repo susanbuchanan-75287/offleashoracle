@@ -6,6 +6,19 @@ Operated by **Joy, Thee & Me LLC**.
 
 ---
 
+## [2026-07-06] — Operational docs + subscriber backup/restore
+
+### Added
+- **`USER-MANUAL.md`** — plain-language owner/visitor guide: what the site is, how the daily quote + subscribe/push flow works, routine owner tasks, note that the backend lives in the barkparks repo, and a troubleshooting table.
+- **`DISASTER-RECOVERY.md`** — full recovery runbook: site recovery, rollback via `deploy-<utc>-<sha>` tags, backend redeploy from barkparks `functions/oracle.js`, DNS, credentials, and **§4 Firestore subscriber backup/restore** (mint token → back up `oracle-subscribers` → restore into a test collection → verify → cleanup). Documents the passed restore drill (4 docs restored, verified field-for-field, cleaned up; live collection untouched).
+- **`REBUILD.md`** — clean-room from-scratch rebuild guide (site → backend → data → domain → verify) for total-loss scenarios.
+- **Subscriber backup tooling** (in the **barkparks** repo): `scripts/backup-subscribers.ps1` writes versioned raw JSON snapshots of `oracle-subscribers`; snapshot output path added to barkparks `.gitignore` (snapshots contain PII and are never committed).
+
+### Notes
+- Closes the readiness-audit gaps: subscriber data now has a **backup** and a **tested restore**, and offleashoracle now has user-manual / DR / rebuild documentation on par with barkparks and binditails.
+
+---
+
 ## [2026-07-06] — Accessibility: main landmark
 
 ### Changed

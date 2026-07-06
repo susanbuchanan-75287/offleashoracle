@@ -5,7 +5,7 @@
 > timestamped record of every change). Governance principle: **every published document
 > is versioned, dated, and reconstructable to the exact wording live on any date.**
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 ---
 
@@ -94,3 +94,19 @@ git show <sha>:privacy.html > privacy_as_of_2026-08-01.html
 
 The exported file is the byte-for-byte document that was published at that time; its
 Version badge and Effective Date confirm the version, and this register corroborates it.
+
+## 7. Data protection & subscriber backup
+
+Subscriber data (`oracle-subscribers` in Firestore, project `binditails-da2de`) is the only
+personal data the service stores. It is protected by backup + tested restore:
+
+| Date | Change | Artifact |
+|---|---|---|
+| 2026-07-06 | **Subscriber backup tooling + passed restore drill.** Added `scripts/backup-subscribers.ps1` (in the **barkparks** repo, which owns the Firebase functions) to export versioned raw JSON snapshots of `oracle-subscribers`. Ran a sandboxed restore drill: 4 confirmed docs restored into a throwaway `oracle-subscribers-restore-test` collection, verified field-for-field, then cleaned up — the live collection was never touched. Full runbook in `DISASTER-RECOVERY.md` §4. | `DISASTER-RECOVERY.md` §4; `barkparks/scripts/backup-subscribers.ps1` |
+
+- **PII handling:** snapshots contain email addresses / phone numbers and are **never committed**
+  to any public repo. The backup script writes to a `.gitignore`d path; working copies live only
+  in private/local storage.
+- **Recovery:** to rebuild subscriber data after loss, follow `DISASTER-RECOVERY.md` §4 (mint a
+  GCP token → restore snapshot docs via the Firestore REST `createDocument` API).
+
