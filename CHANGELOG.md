@@ -6,6 +6,20 @@ Operated by **Joy, Thee & Me LLC**.
 
 ---
 
+## [2026-07-06] — Web push (FCM) + deploy safety net verified live (close-out)
+
+### Verified
+- **Deploy safety net — confirmed complete + live.** `.github/workflows/deploy-safety-net.yml` validates data/build on every push & PR and stamps each production deploy `deploy-<utc>-<sha>` (newest 30 kept). Green runs; rollback tags present through the latest deploy. No further work.
+- **Web push (FCM) — end-to-end verified live.** All Off-Leash Oracle Cloud Functions are deployed to Firebase `binditails-da2de` (`oracleSignup`, `oracleConfirm`, `oracleUnsubscribe`, `oraclePushSubscribe`, `oraclePushUnsubscribe`, `oracleDailySend`). `index.html` push subscribe/unsubscribe UI is fully wired (FCM SDK + VAPID key + service-worker registration); `firebase-messaging-sw.js` is live (HTTP 200). Firestore `settings/oracle` flags confirmed live: `pushEnabled`, `dailyEnabled`, `emailEnabled`, `smsEnabled` all `true`; `maxDailyRecipients` 5000.
+
+### Subscriber state (privacy-safe counts, no PII in source control)
+- `oracle-subscribers`: **4 confirmed** subscribers — 3 email, 1 SMS. No test records. No push-method opt-in yet (push is available and wired; simply no subscriber has enabled it).
+
+### Note
+- No code changed in this close-out — verification only. Both offleashoracle "push" tracks (deploy safety net + FCM web push) are **CLOSED**.
+
+---
+
 ## [2026-07-06] — Backend audit snapshot committed to repo
 
 ### Added

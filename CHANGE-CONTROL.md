@@ -5,7 +5,7 @@
 > timestamped record of every change). Governance principle: **every published document
 > is versioned, dated, and reconstructable to the exact wording live on any date.**
 
-Last updated: 2026-07-06
+Last updated: 2026-07-06 (push + safety-net close-out, §8)
 
 ---
 
@@ -111,4 +111,22 @@ personal data the service stores. It is protected by backup + tested restore:
   in private/local storage.
 - **Recovery:** to rebuild subscriber data after loss, follow `DISASTER-RECOVERY.md` §4 (mint a
   GCP token → restore snapshot docs via the Firestore REST `createDocument` API).
+
+---
+
+## 8. Web push (FCM) + deploy safety net — verification close-out
+
+Governance record for the offleashoracle "push" workstream, closed out 2026-07-06. Both
+tracks are **CLOSED**; this section is a verification record (no code changed at close-out).
+
+| Date | Item | Status | Evidence |
+|---|---|---|---|
+| 2026-07-06 | **Track 1 — deploy safety net** | ✅ complete + live | `.github/workflows/deploy-safety-net.yml` validates data/build on every push & PR and stamps each production deploy `deploy-<utc>-<sha>` (newest 30 retained). Green runs; rollback tags present through the latest deploy. See §5. |
+| 2026-07-06 | **Track 2 — web push (FCM)** | ✅ verified live end-to-end | All Oracle Cloud Functions deployed to Firebase `binditails-da2de` (`oracleSignup`/`oracleConfirm`/`oracleUnsubscribe`/`oraclePushSubscribe`/`oraclePushUnsubscribe`/`oracleDailySend`). `index.html` push subscribe/unsubscribe UI fully wired (FCM SDK + VAPID key + service-worker registration). `firebase-messaging-sw.js` live (HTTP 200). |
+| 2026-07-06 | **Live `settings/oracle` flags** | ✅ confirmed | `pushEnabled`, `dailyEnabled`, `emailEnabled`, `smsEnabled` all `true`; `maxDailyRecipients` 5000. |
+
+- **Subscriber state (privacy-safe counts only):** `oracle-subscribers` holds **4 confirmed**
+  subscribers — 3 email, 1 SMS. No test records. **No push-method opt-in yet** (push is
+  available and wired; no subscriber has enabled it). Consistent with §7 PII handling — raw
+  addresses/numbers are never committed here.
 
