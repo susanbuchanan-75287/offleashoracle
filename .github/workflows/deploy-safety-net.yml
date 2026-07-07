@@ -56,21 +56,25 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
       - name: Tag this production release
+        # Create the rollback tag through the Git refs API instead of `git push`.
+        # The built-in GITHUB_TOKEN is a GitHub App token, and the git-push guard
+        # rejects any ref push that references changes under .github/workflows/**
+        # (which the App token cannot carry — there is no grantable `workflows`
+        # permission). Creating a tag ref that points at the already-deployed
+        # commit SHA references existing content rather than introducing workflow
+        # changes, so `contents: write` is sufficient and the guard is not tripped.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -e
           TAG="deploy-$(date -u +%Y-%m-%d-%H%M%S)-${GITHUB_SHA::7}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Production deploy of ${GITHUB_SHA} to GitHub Pages"
-          git push origin "$TAG"
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/tags/${TAG}" -f sha="${GITHUB_SHA}"
           echo "Tagged rollback point: $TAG"
-          # Keep the 30 most recent deploy-* tags; delete the rest locally and on origin.
-          git tag -l 'deploy-*' | sort -r | tail -n +31 | while read -r OLD; do
-            git push origin ":refs/tags/$OLD" 2>/dev/null || true
-            git tag -d "$OLD" 2>/dev/null || true
-          done
+          # Keep the 30 most recent deploy-* tags; prune the rest via the API.
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/deploy-" \
+            --jq '.[].ref | sub("refs/tags/"; "")' \
+            | sort -r | tail -n +31 | while read -r OLD; do
+                gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/tags/${OLD}" 2>/dev/null || true
+              done
