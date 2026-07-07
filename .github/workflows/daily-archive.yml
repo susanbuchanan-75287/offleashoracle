@@ -23,10 +23,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          # PAT of the repo admin (susanbuchanan-75287). The built-in GITHUB_TOKEN
-          # cannot bypass the branch ruleset on main (role-based bypass does not
-          # apply to it), so the daily push must authenticate as the admin owner.
-          token: ${{ secrets.ARCHIVE_PUSH_TOKEN }}
+          # SSH deploy key (secret ARCHIVE_DEPLOY_KEY) for pushing back to main.
+          # The built-in GITHUB_TOKEN cannot bypass the "Protect main" ruleset, so
+          # the daily push authenticates via a writable deploy key, which is a
+          # bypass actor on the ruleset. checkout configures the SSH remote and
+          # persists credentials, so the later `git push` works with no PAT.
+          ssh-key: ${{ secrets.ARCHIVE_DEPLOY_KEY }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
