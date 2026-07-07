@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # PAT of the repo admin (susanbuchanan-75287). The built-in GITHUB_TOKEN
           # cannot bypass the branch ruleset on main (role-based bypass does not
