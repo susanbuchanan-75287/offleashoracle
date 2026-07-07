@@ -191,7 +191,7 @@ ${JSON.stringify(breadcrumb, null, 2)}
   </section>
 
   <section aria-label="All readings">
-    <ol class="arc-list">
+    <ol class="arc-list" data-baked-count="${count}" data-launch-utc="${LAUNCH_UTC}" data-quote-count="${quotes.length}">
 ${items}
     </ol>
   </section>
@@ -214,6 +214,61 @@ ${items}
     &copy; 2026 The Off-Leash Oracle&trade; &middot; Joy, Thee &amp; Me LLC. All rights reserved.
   </div>
 </footer>
+<script>
+/* Progressive drip: reveal any readings that have become available since this
+   page was built, using the visitor's current date. Mirrors the exact logic in
+   scripts/build-archive.js and index.html (LAUNCH_UTC + quotes[(n-1)%len]).
+   The server-built list above stays intact as a no-JS / SEO fallback. */
+(function () {
+  var list = document.querySelector('.arc-list');
+  if (!list) return;
+  var launchUTC = parseInt(list.getAttribute('data-launch-utc'), 10);
+  var bakedCount = parseInt(list.getAttribute('data-baked-count'), 10) || 0;
+  if (!launchUTC) return;
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function itemHTML(n, q) {
+    return '<li class="arc-item" id="w-' + n + '" itemscope itemtype="https://schema.org/Quotation">'
+      + '<blockquote itemprop="text">' + esc(q) + '</blockquote>'
+      + '<cite><span itemprop="spokenByCharacter">The Off-Leash Oracle&trade;</span> &middot; No.&nbsp;' + n + '</cite>'
+      + '<a class="arc-permalink" href="#w-' + n + '" aria-label="Permalink to reading ' + n + '">#</a>'
+      + '</li>';
+  }
+
+  fetch('data/oracle-quotes.json', { cache: 'no-cache' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (raw) {
+      if (!Array.isArray(raw)) return;
+      var quotes = raw.filter(function (q) { return typeof q === 'string' && q.trim(); });
+      if (!quotes.length) return;
+
+      var days = Math.floor((Date.now() - launchUTC) / 86400000) + 1;
+      var count = Math.max(1, Math.min(days, quotes.length));
+      if (count <= bakedCount) return; // nothing new since build
+
+      // Newest first: prepend readings bakedCount+1 .. count above the baked list.
+      var frag = '';
+      for (var n = count; n > bakedCount; n--) {
+        frag += itemHTML(n, quotes[((n - 1) % quotes.length + quotes.length) % quotes.length]);
+      }
+      list.insertAdjacentHTML('afterbegin', frag);
+      list.setAttribute('data-baked-count', count);
+
+      var word = count === 1 ? 'reading' : 'readings';
+      var countEl = document.querySelector('.arc-count');
+      if (countEl) countEl.innerHTML = count + ' ' + word + ' &middot; and counting';
+      var ledeEl = document.querySelector('.arc-lede');
+      if (ledeEl) {
+        ledeEl.textContent = count === 1
+          ? 'The Oracle has spoken just once so far \u2014 this is where every reading will gather. A new trail truth is added here each morning, so the collection grows a little wiser every day.'
+          : 'One reading arrives each morning, and this is where they gather. So far the dogs have offered ' + count + ' small, four-pawed truths \u2014 a new one lands here every day.';
+      }
+    })
+    .catch(function () { /* keep the server-built fallback */ });
+})();
+</script>
 </body>
 </html>
 `;
