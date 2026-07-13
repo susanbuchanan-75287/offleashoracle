@@ -9,7 +9,7 @@ Operated by **Joy, Thee & Me LLC**.
 ## [2026-07-13] — Anti-clickjacking frame-buster + CSP meta cleanup
 
 ### Added
-- Added a tiny inline JS **frame-buster** to the `<head>` of every page (4 files): if the page is framed by another site, it re-navigates the top window back to itself. `try/catch`-guarded and does **not** hide content, so no-JS users still see the page. This is the only client-side anti-framing option on **GitHub Pages**, which cannot send `X-Frame-Options` / CSP `frame-ancestors` HTTP headers.
+- Added a tiny inline **anti-clickjacking guard** to the `<head>` of every page (4 files): a `<style id="cj-guard">body{display:none!important}</style>` hides the page by default and an inline script reveals it **only** when the page is the top-level window (`self === top`). If the page is framed by another site the content stays hidden (and cannot be clickjacked); the script also best-effort re-navigates the top window to itself. A `<noscript>` fallback re-shows the page for JS-disabled users, and the script fails **open** on error so a legit page is never blank. This hide-by-default approach is the only real client-side anti-framing option on **GitHub Pages**, which cannot send `X-Frame-Options` / CSP `frame-ancestors` HTTP headers. Verified with a Playwright test.
 
 ### Changed
 - Removed the `frame-ancestors` directive from the `<meta>` CSP on all pages. Browsers ignore `frame-ancestors` delivered via `<meta>` (HTTP-header-only directive), so it only produced a console warning. All other CSP directives (`object-src 'none'`, `base-uri 'self'`, etc.) remain enforced.

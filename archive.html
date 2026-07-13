@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>/* frame-buster: anti-clickjacking (GitHub Pages cannot send X-Frame-Options / CSP frame-ancestors) */(function(){if(self!==top){try{top.location=self.location;}catch(e){}}})();</script>
+  <style id="cj-guard">body{display:none!important}</style>
+  <script>/* anti-clickjacking guard: this site is on GitHub Pages, which cannot send X-Frame-Options / CSP frame-ancestors headers. Hide the page until we confirm it is the top-level window; reveal it only if not framed. Fails OPEN so a legit page is never left blank. */(function(){try{var g=document.getElementById("cj-guard");if(self===top){if(g&&g.parentNode)g.parentNode.removeChild(g);}else{try{top.location=self.location;}catch(e){}}}catch(e){try{var h=document.getElementById("cj-guard");if(h&&h.parentNode)h.parentNode.removeChild(h);}catch(_){}}})();</script>
+  <noscript><style>body{display:block!important}</style></noscript>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';">
